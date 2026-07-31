@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>SPT Clan Command Center — FINAL</title>
+<style>
+    /* ---------- Base ---------- */
+    :root{
+        --glass-bg: rgba(10,12,18,0.72);
+        --accent: rgba(0,234,255,0.85);
+        --accent-strong: rgba(0,234,255,1);
+        --panel-blur: 18px;
+        --panel-radius: 14px;
+    }
+
+    html,body{height:100%;margin:0;padding:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:
+        radial-gradient(circle at top, #1b1f29 0%, #050607 55%, #020305 100%);color:#e0e0e0;line-height:1.35;}
+    body{opacity:0;transition:opacity .6s ease}
+
+    h1,h2{margin:0 0 10px 0;text-shadow:0 0 12px rgba(0,234,255,0.12);font-weight:700}
+    .container{padding:18px;max-width:1200px;margin:0 auto}
+
+    /* ---------- Nav ---------- */
+    #nav{
+        display:flex;gap:10px;padding:10px 18px;background:rgba(5,6,10,0.75);
+        border-bottom:1px solid rgba(0,234,255,0.12);box-shadow:0 0 18px rgba(0,234,255,0.06);
+        position:sticky;top:0;z-index:40;backdrop-filter:blur(12px);
+    }
+    #nav button{
+        padding:8px 14px;border-radius:999px;border:1px solid rgba(0,234,255,0.18);
+        background:linear-gradient(180deg,#00eaff 0%,#0094ff 40%);color:#001;
+        font-weight:700;cursor:pointer;box-shadow:0 6px 18px rgba(0,234,255,0.06);
+        transition:transform .14s ease,box-shadow .14s ease,opacity .14s ease;
+    }
+    #nav button:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(0,234,255,0.12)}
+    #nav button:active{transform:scale(.98)}
+
+    /* ---------- Panels ---------- */
+    .panel{
+        background:var(--glass-bg);border-radius:var(--panel-radius);
+        border:1px solid rgba(0,234,255,0.08);padding:14px;margin:18px 0;
+        box-shadow:0 8px 28px rgba(0,0,0,0.45);backdrop-filter:blur(var(--panel-blur));
+    }
+    .panel h2{font-size:16px;margin-bottom:8px;color:#dffaff}
+
+    input,select,textarea{
+        width:100%;box-sizing:border-box;padding:8px 10px;border-radius:10px;border:1px solid rgba(0,234,255,0.08);
+        background:rgba(5,7,12,0.9);color:#e6f9ff;font-size:13px;margin:6px 0;
+    }
+    textarea{min-height:90px;resize:vertical}
+
+    button.action{
+        display:inline-block;padding:9px 16px;border-radius:999px;border:1px solid rgba(0,234,255,0.12);
+        background:linear-gradient(180deg,#00eaff 0%,#00b7ff 40%);color:#001;font-weight:800;cursor:pointer;
+        box-shadow:0 8px 28px rgba(0,234,255,0.06);transition:transform .12s ease,box-shadow .12s ease;
+    }
+    button.action:hover{transform:translateY(-3px);box-shadow:0 14px 36px rgba(0,234,255,0.12)}
+
+    /* ---------- Lock Screen ---------- */
+    #lockScreen{
+        position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;
+        background:radial-gradient(circle at top, rgba(0,0,0,0.9), rgba(0,0,0,1));z-index:9999;
+        backdrop-filter:blur(20px);padding:20px;gap:12px;
+    }
+    #lockScreen.fadeOut{opacity:0;transform:scale(1.03);pointer-events:none;transition:opacity .5s ease,transform .5s ease}
+    #lockScreen h1{font-size:22px;color:#bffcff}
+    #lockScreen input{width:300px;text-align:center;font-size:16px}
+
+    /* ---------- Boards ---------- */
+    .board{
+        width:100%;height:260px;border-radius:12px;background:
+        radial-gradient(circle at center,#1a1f27 0%,#090b10 60%,#050607 100%);
+        border:1px solid rgba(0,234,255,0.06);position:relative;overflow:hidden;margin-top:10px;
+    }
+
+    .marker{
+        width:50px;height:50px;border-radius:50%;position:absolute;display:flex;align-items:center;justify-content:center;
+        font-weight:800;color:#001;cursor:grab;user-select:none;
+        background:radial-gradient(circle at top,#00eaff 0%,#00b7ff 40%,#021018 100%);
+        box-shadow:0 8px 28px rgba(0,234,255,0.12);
+        transition:transform .08s ease,box-shadow .08s ease,opacity .12s ease;
+    }
+    .marker:active{cursor:grabbing;transform:scale(.98)}
+
+    .routeLine{
+        position:absolute;height:4px;border-radius:4px;background:linear-gradient(90deg,#00ff88,#00eaff);
+        box-shadow:0 6px 18px rgba(0,255,136,0.06);animation:pulseRoute 1.6s infinite;
+    }
+    @keyframes pulseRoute{0%{opacity:.25}50%{opacity:1}100%{opacity:.25}}
+
+    /* ---------- Sections (fixed scroll issue) ---------- */
+    .section{
+        opacity:0;transform:translateY(18px) scale(.995);transition:opacity .36s ease,transform .36s ease;
+        height:auto;min-height:0;overflow:visible;padding-bottom:12px;
+    }
+    .section.active{opacity:1;transform:translateY(0) scale(1);}
+
+    .hudSlide{animation:hudSlideIn .45s ease forwards}
+    @keyframes hudSlideIn{from{opacity:0;transform:translateX(-18px) scale(.995)}to{opacity:1;transform:translateX(0) scale(1)}}
+
+    /* ---------- Summary / Grid ---------- */
+    .summaryGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+    .summaryCard{background:rgba(8,10,14,0.6);padding:10px;border-radius:10px;border:1px solid rgba(0,234,255,0.04);font-size:13px}
+
+    /* ---------- Chat ---------- */
+    #chatMessages{max-height:200px;overflow:auto;padding:6px;border-radius:8px;background:rgba(0,0,0,0.12)}
+    #chatMessages .msg{margin-bottom:6px;font-size:13px}
+
+    /* ---------- Map Preview ---------- */
+    #mapPreviewContainer{width:100%;height:240px;border-radius:12px;background:rgba(0,0,0,0.28);display:flex;align-items:center;justify-content:center;overflow:hidden;border:1px solid rgba(0,234,255,0.06)}
+    #mapPreview{max-width:100%;max-height:100%;display:none;border-radius:8px;object-fit:cover;filter:contrast(1.02) saturate(1.05)}
+
+    /* ---------- Small helpers ---------- */
+    .row{display:flex;gap:8px;align-items:center}
+    .muted{color:#9fbfcf;font-size:13px}
+    .small{font-size:12px;color:#bfeffb}
+    .right{margin-left:auto}
+    .controls{display:flex;gap:8px;flex-wrap:wrap}
+    .tiny{padding:6px 10px;font-size:12px;border-radius:8px}
+    .danger{background:linear-gradient(180deg,#ff6b6b,#ff3b3b);color:#100;border:1px solid rgba(255,80,80,0.2)}
+    @media (max-width:880px){.splitView{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<!-- ---------- LOCK SCREEN ---------- -->
+<div id="lockScreen">
+    <h1>SPT Dark Ops Command Center</h1>
+    <p class="muted">Enter access password to proceed.</p>
+    <input id="passInput" type="password" placeholder="Password..." />
+    <div class="controls">
+        <button class="action" onclick="unlock()">Unlock</button>
+        <button class="action tiny" onclick="demoUnlock()">Demo Unlock</button>
+    </div>
+    <p class="small muted">Tip: Right-click markers/routes to delete them.</p>
+</div>
+
+<!-- ---------- NAV ---------- -->
+<div id="nav">
+    <button onclick="showSection('dashboard')">Dashboard</button>
+    <button onclick="showSection('roster')">Roster</button>
+    <button onclick="showSection('tactics')">Tactics</button>
+    <button onclick="showSection('attack')">Attack Board</button>
+    <button onclick="showSection('defense')">Defense Board</button>
+    <button onclick="showSection('intel')">Enemy Intel</button>
+    <button onclick="showSection('warroom')">War Room</button>
+    <button onclick="showSection('chat')">Clan Chat</button>
+</div>
+
+<!-- ---------- MAIN CONTAINER ---------- -->
+<div class="container">
+
+    <!-- DASHBOARD -->
+    <div id="dashboard" class="section active">
+        <h1>SPT Command Center Dashboard</h1>
+
+        <div class="panel">
+            <h2>Mission Briefing</h2>
+            <input id="missionName" placeholder="Mission name..." />
+            <input id="missionEnemy" placeholder="Enemy clan..." />
+            <input id="missionMap" placeholder="Map..." />
+            <input id="missionTime" type="datetime-local" />
+            <textarea id="missionNotes" placeholder="Briefing notes..."></textarea>
+            <div class="controls">
+                <button class="action" onclick="saveMission()">Save Briefing</button>
+                <button class="action tiny" onclick="clearMission()">Clear</button>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>Live Clan Status</h2>
+            <select id="statusSelect" onchange="updateStatus()">
+                <option value="Preparing">Preparing</option>
+                <option value="Ready">Ready</option>
+                <option value="Not Ready">Not Ready</option>
+            </select>
+            <p>Status: <strong id="statusIndicator">Preparing</strong></p>
+        </div>
+
+        <div class="panel">
+            <h2>Clan War Countdown</h2>
+            <input id="warTime" type="datetime-local" />
+            <div class="controls">
+                <button class="action" onclick="startCountdown()">Start Countdown</button>
+                <button class="action tiny" onclick="stopCountdown()">Stop</button>
+            </div>
+            <p id="countdownDisplay">No war time set.</p>
+        </div>
+
+        <div class="panel">
+            <h2>Quick Summary</h2>
+            <div class="summaryGrid">
+                <div class="summaryCard">
+                    <strong>Roster Status</strong>
+                    <div id="summaryRoster">No players added yet.</div>
+                </div>
+                <div class="summaryCard">
+                    <strong>Map Strategy</strong>
+                    <div id="summaryMap">No strategy written yet.</div>
+                </div>
+                <div class="summaryCard">
+                    <strong>Attack Board</strong>
+                    <div id="summaryAttack">Markers: 0</div>
+                </div>
+                <div class="summaryCard">
+                    <strong>Defense Board</strong>
+                    <div id="summaryDefense">Markers: 0</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>Export / Import Full Clan Package</h2>
+            <div class="controls">
+                <button class="action" onclick="exportPackage()">Export Package</button>
+                <input type="file" id="importFile" onchange="importPackage(event)" />
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>Dark Ops Sound</h2>
+            <div class="controls">
+                <button class="action" onclick="toggleSound()">Toggle UI Sound</button>
+                <button class="action tiny" onclick="playUISound()">Play Test</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ROSTER -->
+    <div id="roster" class="section">
+        <h1>Roster Manager</h1>
+
+        <div class="panel">
+            <h2>Add Player</h2>
+            <input id="playerName" placeholder="Player name..." />
+            <select id="playerRole">
+                <option value="IGL">IGL</option>
+                <option value="Entry">Entry</option>
+                <option value="Support">Support</option>
+                <option value="Sniper">Sniper</option>
+                <option value="Lurker">Lurker</option>
+            </select>
+            <div class="controls">
+                <button class="action" onclick="addPlayer()">Add Player</button>
+                <button class="action tiny" onclick="clearRoster()">Clear Roster</button>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>Current Roster</h2>
+            <div id="rosterList"></div>
+        </div>
+
+        <div class="panel">
+            <h2>Player Loadout / Confidence / Attendance</h2>
+            <p class="muted">Select a player from the roster to edit.</p>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px">
+                <input id="loadoutPrimary" placeholder="Primary weapon" />
+                <input id="loadoutSecondary" placeholder="Secondary weapon" />
+                <input id="loadoutUtility" placeholder="Utility" />
+                <input id="loadoutPerks" placeholder="Perks" />
+            </div>
+            <p>Confidence: <span id="confidenceLabel">50%</span></p>
+            <input id="confidence" type="range" min="0" max="100" value="50" oninput="updateConfidenceLabel()" />
+            <p>Attendance:</p>
+            <select id="attendance">
+                <option value="Unknown">Unknown</option>
+                <option value="Available">Available</option>
+                <option value="Maybe">Maybe</option>
+                <option value="Not Available">Not Available</option>
+            </select>
+            <div class="controls">
+                <button class="action" onclick="savePlayerDetails()">Save Player Details</button>
+                <button class="action tiny" onclick="deleteSelectedPlayer()">Delete Selected</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TACTICS -->
+    <div id="tactics" class="section">
+        <h1>Tactics Planner</h1>
+
+        <div class="panel">
+            <h2>Map Selector</h2>
+            <select id="mapSelector" onchange="updateMapPreview()">
+                <!-- Core Maps -->
+                <option value="Factory">Factory</option>
+                <option value="Arena">Arena</option>
+                <option value="Backrooms">Backrooms</option>
+                <option value="Battleground">Battleground</option>
+                <option value="Bridge">Bridge</option>
+                <option value="Chess">Chess</option>
+                <option value="Crossroads">Crossroads</option>
+                <option value="Construction">Construction</option>
+                <option value="Dimension">Dimension</option>
+                <option value="Docks">Docks</option>
+                <option value="Graveyard">Graveyard</option>
+                <option value="Iceberg">Iceberg</option>
+                <option value="Onyx">Onyx</option>
+                <option value="Playground">Playground</option>
+                <option value="Splash">Splash</option>
+                <option value="Station">Station</option>
+                <option value="Shooting Range">Shooting Range</option>
+                <option value="Village">Village</option>
+
+                <!-- Big Variants -->
+                <option value="Big Arena">Big Arena</option>
+                <option value="Big Backrooms">Big Backrooms</option>
+                <option value="Big Crossroads">Big Crossroads</option>
+                <option value="Big Graveyard">Big Graveyard</option>
+                <option value="Big Onyx">Big Onyx</option>
+                <option value="Big Splash">Big Splash</option>
+                <option value="Big Station">Big Station</option>
+
+                <!-- Legacy Maps -->
+                <option value="Legacy Backrooms">Legacy Backrooms</option>
+                <option value="Legacy Battleground">Legacy Battleground</option>
+                <option value="Legacy Crossroads">Legacy Crossroads</option>
+                <option value="Legacy Docks">Legacy Docks</option>
+                <option value="Legacy Onyx">Legacy Onyx</option>
+                <option value="Legacy Sandbox">Legacy Sandbox</option>
+                <option value="Legacy Splash">Legacy Splash</option>
+                <option value="Legacy Big Splash">Legacy Big Splash</option>
+
+                <!-- New Additions -->
+                <option value="Westown">Westown</option>
+                <option value="Museum">Museum</option>
+                <option value="Studio">Studio</option>
+            </select>
+        </div>
+
+        <div class="panel">
+            <h2>Mini‑Map Preview</h2>
+            <div id="mapPreviewContainer">
+                <img id="mapPreview" src="" alt="Map Preview" />
+                <div id="mapPreviewPlaceholder" class="muted small" style="position:absolute">No preview available — add your images or use the provided URLs.</div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>Map Strategy</h2>
+            <textarea id="mapStrat" placeholder="Write your map strategy here..."></textarea>
+        </div>
+
+        <div class="panel">
+            <h2>Team Roles</h2>
+            <textarea id="teamRoles" placeholder="Assign roles (IGL, Entry, Support, Sniper)..."></textarea>
+        </div>
+
+        <div class="panel">
+            <h2>Enemy Analysis</h2>
+            <textarea id="enemyAnalysis" placeholder="Write what you know about the enemy clan..."></textarea>
+        </div>
+
+        <div class="panel">
+            <h2>Special Tactics</h2>
+            <textarea id="specialTactics" placeholder="Any special plays, rushes, setups..."></textarea>
+        </div>
+
+        <div class="panel">
+            <h2>Utility Planner</h2>
+            <textarea id="utilityPlan" placeholder="List smokes, flashes, grenades, traps, etc."></textarea>
+        </div>
+
+        <div class="panel">
+            <h2>Timed Execution Planner</h2>
+            <textarea id="timedPlan" placeholder="0:00 - Smoke mid&#10;0:03 - Entry pushes&#10;0:05 - Support flashes..."></textarea>
+        </div>
+
+        <div class="panel">
+            <div class="controls">
+                <button class="action" onclick="savePlan()">Save Plan</button>
+                <button class="action tiny" onclick="loadPlan()">Load Plan</button>
+                <button class="action tiny" onclick="clearPlan()">Clear Plan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ATTACK BOARD -->
+    <div id="attack" class="section">
+        <h1>Attack Board</h1>
+        <div class="panel">
+            <p class="muted">Drag markers to plan attack routes and positions. Right-click to delete.</p>
+            <div class="controls">
+                <button class="action" onclick="addMarker('attackBoard','A')">Add Attack Marker</button>
+                <button class="action" onclick="addRoute('attackBoard')">Add Animated Route</button>
+                <button class="action tiny" onclick="clearBoard('attackBoard')">Clear Board</button>
+            </div>
+            <div id="attackBoard" class="board"></div>
+        </div>
+    </div>
+
+    <!-- DEFENSE BOARD -->
+    <div id="defense" class="section">
+        <h1>Defense Board</h1>
+        <div class="panel">
+            <p class="muted">Drag markers to plan defensive holds and setups. Right-click to delete.</p>
+            <div class="controls">
+                <button class="action" onclick="addMarker('defenseBoard','D')">Add Defense Marker</button>
+                <button class="action tiny" onclick="clearBoard('defenseBoard')">Clear Board</button>
+            </div>
+            <div id="defenseBoard" class="board"></div>
+        </div>
+    </div>
+
+    <!-- ENEMY INTEL -->
+    <div id="intel" class="section">
+        <h1>Enemy Clan Database</h1>
+        <div class="panel">
+            <h2>Add / Edit Enemy Clan</h2>
+            <input id="enemyName" placeholder="Enemy clan name" />
+            <input id="enemyStyle" placeholder="Playstyle (aggro, slow, etc.)" />
+            <input id="enemyFavMaps" placeholder="Favorite maps" />
+            <input id="enemyStars" placeholder="Star players" />
+            <textarea id="enemyWeakness" placeholder="Weaknesses"></textarea>
+            <textarea id="enemyHistory" placeholder="Past match results"></textarea>
+            <div class="controls">
+                <button class="action" onclick="saveEnemy()">Save Enemy Profile</button>
+                <button class="action tiny" onclick="clearEnemyForm()">Clear</button>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>Saved Enemy Clans</h2>
+            <select id="enemySelect" onchange="loadEnemyProfile()">
+                <option value="">Select enemy...</option>
+            </select>
+            <div id="enemyProfile" style="margin-top:10px"></div>
+        </div>
+    </div>
+
+    <!-- WAR ROOM -->
+    <div id="warroom" class="section">
+        <h1>War Room View</h1>
+        <div class="panel splitView" style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px">
+            <div>
+                <h2>Attack Board</h2>
+                <div id="attackBoardClone" class="board"></div>
+            </div>
+            <div>
+                <h2>Defense Board</h2>
+                <div id="defenseBoardClone" class="board"></div>
+            </div>
+            <div style="grid-column:1/3">
+                <h2>Tactics Summary</h2>
+                <textarea id="tacticsSummary" readonly style="height:160px"></textarea>
+            </div>
+            <div style="grid-column:1/3">
+                <h2>Roster Snapshot</h2>
+                <div id="rosterSnapshot"></div>
+            </div>
+        </div>
+        <div style="margin-top:10px">
+            <button class="action" onclick="refreshWarRoom()">Refresh War Room View</button>
+        </div>
+    </div>
+
+    <!-- CLAN CHAT -->
+    <div id="chat" class="section">
+        <h1>Clan Chat Panel</h1>
+        <div class="panel">
+            <div id="chatMessages"></div>
+            <div style="display:grid;grid-template-columns:1fr 160px 120px;gap:8px;margin-top:8px">
+                <input id="chatName" placeholder="Your name" />
+                <select id="chatRank">
+                    <option>Commander</option>
+                    <option>Operator</option>
+                    <option>Recruit</option>
+                </select>
+                <input id="chatText" placeholder="Message..." />
+            </div>
+            <div style="margin-top:8px">
+                <button class="action" onclick="sendChat()">Send</button>
+                <button class="action tiny" onclick="clearChat()">Clear</button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ---------- SCRIPTS ---------- -->
+<script>
+/* ============================
+   FINAL SPT COMMAND PANEL JS
+   ============================ */
+
+let selectedPlayer = null;
+let uiSoundEnabled = false;
+let countdownInterval = null;
+
+/* ---------- Map images (user-provided URLs + placeholders) ---------- */
+const mapImages = {
+    "Factory": "",
+    "Arena": "https://robloxrivals.fandom.com/wiki/File:Screenshot_2025-05-10_211723.png",
+    "Backrooms": "",
+    "Battleground": "https://robloxrivals.fandom.com/wiki/File:BattlegroundTopView.png",
+    "Bridge": "https://robloxrivals.fandom.com/wiki/File:FullViewOfBridgeMap.webp",
+    "Chess": "",
+    "Crossroads": "",
+    "Construction": "",
+    "Dimension": "",
+    "Docks": "https://robloxrivals.fandom.com/wiki/File:Close_Up_View_Of_Docks_Map.png",
+    "Graveyard": "",
+    "Iceberg": "https://robloxrivals.fandom.com/wiki/File:IcebergTopView.png",
+    "Onyx": "",
+    "Playground": "https://robloxrivals.fandom.com/wiki/File:PlaygroundMap.png",
+    "Splash": "https://robloxrivals.fandom.com/wiki/File:FullViewOfSplashMap.png",
+    "Station": "https://robloxrivals.fandom.com/wiki/File:Close_Up_View_Of_Station_Map.png",
+    "Shooting Range": "",
+    "Village": "",
+
+    "Big Arena": "",
+    "Big Backrooms": "",
+    "Big Crossroads": "",
+    "Big Graveyard": "",
+    "Big Onyx": "",
+    "Big Splash": "",
+    "Big Station": "",
+
+    "Legacy Backrooms": "",
+    "Legacy Battleground": "https://robloxrivals.fandom.com/wiki/File:TheFullViewOfBattlegroundMap.png",
+    "Legacy Crossroads": "",
+    "Legacy Docks": "https://robloxrivals.fandom.com/wiki/File:Legacy_docks.webp",
+    "Legacy Onyx": "",
+    "Legacy Sandbox": "",
+    "Legacy Splash": "",
+    "Legacy Big Splash": "",
+
+    "Westown": "https://robloxrivals.fandom.com/wiki/File:WestownTopView.png",
+    "Museum": "",
+    "Studio": ""
+};
+
+/* ---------- UI helpers ---------- */
+function playUISound(){
+    if(!uiSoundEnabled) return;
+    try{
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = "sine"; o.frequency.value = 720;
+        g.gain.value = 0.02;
+        o.connect(g); g.connect(ctx.destination);
+        o.start(); setTimeout(()=>o.stop(),120);
+    }catch(e){}
+}
+function toggleSound(){ uiSoundEnabled = !uiSoundEnabled; alert("UI sound " + (uiSoundEnabled ? "enabled" : "disabled") + "."); }
+
+/* ---------- Lock / Unlock ---------- */
+function unlock(){
+    const pass = document.getElementById("passInput").value;
+    if(pass === "SPTownsNN1357"){
+        const lock = document.getElementById("lockScreen");
+        lock.classList.add("fadeOut");
+        setTimeout(()=>{ lock.style.display="none"; document.body.style.opacity=1; },600);
+        playUISound();
+    } else alert("Wrong password.");
+}
+function demoUnlock(){ document.getElementById("passInput").value="SPTownsNN1357"; unlock(); }
+
+/* ---------- Section navigation ---------- */
+function showSection(id){
+    document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+    const t = document.getElementById(id);
+    if(!t) return;
+    t.classList.add('active'); t.classList.add('hudSlide');
+    setTimeout(()=>t.classList.remove('hudSlide'),600);
+    playUISound(); updateDashboardSummary();
+}
+
+/* ---------- Roster ---------- */
+function addPlayer(){
+    const name = document.getElementById("playerName").value.trim();
+    const role = document.getElementById("playerRole").value;
+    if(!name) return alert("Enter a player name.");
+    const div = document.createElement("div");
+    div.className = "player";
+    div.innerText = name + " [" + role + "]";
+    div.onclick = ()=>{ selectedPlayer = name; highlightSelectedPlayer(div); alert("Selected player: " + name); };
+    document.getElementById("rosterList").appendChild(div);
+    document.getElementById("playerName").value = "";
+    updateDashboardSummary(); playUISound();
+}
+function highlightSelectedPlayer(el){
+    document.querySelectorAll("#rosterList .player").forEach(p=>p.style.outline="none");
+    if(el) el.style.outline = "2px solid rgba(0,234,255,0.12)";
+}
+function clearRoster(){ if(confirm("Clear entire roster?")){ document.getElementById("rosterList").innerHTML=""; updateDashboardSummary(); } }
+function deleteSelectedPlayer(){
+    if(!selectedPlayer) return alert("No player selected.");
+    const nodes = Array.from(document.querySelectorAll("#rosterList .player"));
+    const node = nodes.find(n=>n.innerText.startsWith(selectedPlayer));
+    if(node){ node.remove(); selectedPlayer=null; updateDashboardSummary(); }
+}
+
+/* ---------- Player details ---------- */
+function updateConfidenceLabel(){ const v=document.getElementById("confidence").value; document.getElementById("confidenceLabel").innerText=v+"%"; }
+function savePlayerDetails(){
+    if(!selectedPlayer) return alert("Select a player from the roster first.");
+    const details = {
+        primary: document.getElementById("loadoutPrimary").value,
+        secondary: document.getElementById("loadoutSecondary").value,
+        utility: document.getElementById("loadoutUtility").value,
+        perks: document.getElementById("loadoutPerks").value,
+        confidence: document.getElementById("confidence").value,
+        attendance: document.getElementById("attendance").value
+    };
+    localStorage.setItem("player_" + selectedPlayer, JSON.stringify(details));
+    alert("Saved details for " + selectedPlayer);
+    playUISound();
+}
+
+/* ---------- Boards: markers & routes (fixed dragging, unlimited routes, right-click delete) ---------- */
+function addMarker(boardId,label){
+    const board = document.getElementById(boardId);
+    if(!board) return;
+    const marker = document.createElement("div");
+    marker.className = "marker";
+    marker.innerText = label;
+    marker.style.left = "20px"; marker.style.top = "20px";
+    marker.draggable = false;
+
+    let rect, shiftX=0, shiftY=0;
+    function onMouseDown(e){
+        e.preventDefault();
+        rect = board.getBoundingClientRect();
+        shiftX = e.clientX - marker.getBoundingClientRect().left;
+        shiftY = e.clientY - marker.getBoundingClientRect().top;
+        document.addEventListener("mousemove", onMouseMove);
+        document.addEventListener("mouseup", onMouseUp);
+        marker.style.cursor = "grabbing";
+    }
+    function onMouseMove(ev){
+        const x = Math.max(0, Math.min(board.clientWidth - marker.offsetWidth, ev.pageX - rect.left - shiftX));
+        const y = Math.max(0, Math.min(board.clientHeight - marker.offsetHeight, ev.pageY - rect.top - shiftY));
+        marker.style.left = x + "px"; marker.style.top = y + "px";
+    }
+    function onMouseUp(){
+        document.removeEventListener("mousemove", onMouseMove);
+        document.removeEventListener("mouseup", onMouseUp);
+        marker.style.cursor = "grab";
+    }
+
+    marker.addEventListener("mousedown", onMouseDown);
+
+    // Right-click to delete
+    marker.addEventListener("contextmenu", (e)=>{
+        e.preventDefault();
+        marker.remove();
+        updateDashboardSummary();
+    });
+
+    // Double-click to label edit
+    marker.addEventListener("dblclick", ()=>{
+        const newLabel = prompt("Edit marker label:", marker.innerText);
+        if(newLabel !== null) marker.innerText = newLabel;
+    });
+
+    board.appendChild(marker);
+    updateDashboardSummary();
+    playUISound();
+}
+
+function addRoute(boardId){
+    const board = document.getElementById(boardId);
+    if(!board) return;
+    const line = document.createElement("div");
+    line.className = "routeLine";
+
+    // random placement and width so multiple routes can be added
+    const maxW = Math.max(80, board.clientWidth - 40);
+    const w = Math.min(300, Math.max(80, Math.floor(Math.random()*160)+80));
+    const left = Math.floor(Math.random() * Math.max(1, board.clientWidth - w));
+    const top = Math.floor(Math.random() * Math.max(1, board.clientHeight - 8));
+
+    line.style.left = left + "px";
+    line.style.top = top + "px";
+    line.style.width = w + "px";
+
+    // right-click delete
+    line.addEventListener("contextmenu", (e)=>{
+        e.preventDefault();
+        line.remove();
+        updateDashboardSummary();
+    });
+
+    // allow dragging the route horizontally (simple)
+    let isDragging=false, startX=0, startLeft=left;
+    line.addEventListener("mousedown", (e)=>{
+        if(e.button !== 0) return;
+        isDragging=true; startX=e.clientX; startLeft = parseInt(line.style.left,10) || 0;
+        document.addEventListener("mousemove", moveLine);
+        document.addEventListener("mouseup", stopLine);
+    });
+    function moveLine(ev){
+        if(!isDragging) return;
+        const dx = ev.clientX - startX;
+        let nl = Math.max(0, Math.min(board.clientWidth - (parseInt(line.style.width)||100), startLeft + dx));
+        line.style.left = nl + "px";
+    }
+    function stopLine(){
+        isDragging=false;
+        document.removeEventListener("mousemove", moveLine);
+        document.removeEventListener("mouseup", stopLine);
+    }
+
+    board.appendChild(line);
+    updateDashboardSummary();
+    playUISound();
+}
+
+/* Clear board */
+function clearBoard(boardId){
+    const b = document.getElementById(boardId);
+    if(!b) return;
+    if(confirm("Clear all markers and routes on this board?")){
+        b.innerHTML = "";
+        updateDashboardSummary();
+    }
+}
+
+/* ---------- Plan save/load ---------- */
+function savePlan(){
+    const plan = {
+        map: document.getElementById("mapStrat").value,
+        roles: document.getElementById("teamRoles").value,
+        enemy: document.getElementById("enemyAnalysis").value,
+        special: document.getElementById("specialTactics").value,
+        utility: document.getElementById("utilityPlan").value,
+        timed: document.getElementById("timedPlan").value,
+        roster: document.getElementById("rosterList").innerHTML,
+        selectedMap: document.getElementById("mapSelector").value
+    };
+    localStorage.setItem("clanPlan", JSON.stringify(plan));
+    alert("Plan saved!");
+    playUISound();
+}
+function loadPlan(){
+    const data = JSON.parse(localStorage.getItem("clanPlan") || "null");
+    if(!data) return alert("No saved plan.");
+    document.getElementById("mapStrat").value = data.map || "";
+    document.getElementById("teamRoles").value = data.roles || "";
+    document.getElementById("enemyAnalysis").value = data.enemy || "";
+    document.getElementById("specialTactics").value = data.special || "";
+    document.getElementById("utilityPlan").value = data.utility || "";
+    document.getElementById("timedPlan").value = data.timed || "";
+    document.getElementById("mapSelector").value = data.selectedMap || "Factory";
+    document.getElementById("rosterList").innerHTML = data.roster || "";
+    updateDashboardSummary();
+    updateMapPreview();
+    alert("Plan loaded!");
+    playUISound();
+}
+function clearPlan(){
+    if(confirm("Clear all tactic fields?")){
+        document.getElementById("mapStrat").value="";
+        document.getElementById("teamRoles").value="";
+        document.getElementById("enemyAnalysis").value="";
+        document.getElementById("specialTactics").value="";
+        document.getElementById("utilityPlan").value="";
+        document.getElementById("timedPlan").value="";
+    }
+}
+
+/* ---------- Dashboard summary ---------- */
+function updateDashboardSummary(){
+    const rosterItems = document.querySelectorAll("#rosterList .player").length;
+    document.getElementById("summaryRoster").innerText = rosterItems ? `${rosterItems} player(s) in roster.` : "No players added yet.";
+    const mapText = document.getElementById("mapStrat").value.trim();
+    document.getElementById("summaryMap").innerText = mapText ? (mapText.length>80?mapText.slice(0,80)+"...":mapText) : "No strategy written yet.";
+    const attackMarkers = document.querySelectorAll("#attackBoard .marker").length;
+    const defenseMarkers = document.querySelectorAll("#defenseBoard .marker").length;
+    document.getElementById("summaryAttack").innerText = `Markers: ${attackMarkers}`;
+    document.getElementById("summaryDefense").innerText = `Markers: ${defenseMarkers}`;
+}
+
+/* ---------- Export / Import ---------- */
+function exportPackage(){
+    const roster = Array.from(document.querySelectorAll("#rosterList .player")).map(p=>p.innerText);
+    const data = {
+        mission: {
+            name: document.getElementById("missionName").value,
+            enemy: document.getElementById("missionEnemy").value,
+            map: document.getElementById("missionMap").value,
+            time: document.getElementById("missionTime").value,
+            notes: document.getElementById("missionNotes").value
+        },
+        status: document.getElementById("statusIndicator").innerText,
+        warTime: document.getElementById("warTime").value,
+        tactics: {
+            map: document.getElementById("mapStrat").value,
+            roles: document.getElementById("teamRoles").value,
+            enemy: document.getElementById("enemyAnalysis").value,
+            special: document.getElementById("specialTactics").value,
+            utility: document.getElementById("utilityPlan").value,
+            timed: document.getElementById("timedPlan").value,
+            selectedMap: document.getElementById("mapSelector").value
+        },
+        roster,
+        enemies: JSON.parse(localStorage.getItem("enemyDB") || "[]")
+    };
+    const blob = new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "SPT_full_package.json";
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    alert("Exported SPT_full_package.json");
+    playUISound();
+}
+function importPackage(e){
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = function(ev){
+        try{
+            const data = JSON.parse(ev.target.result);
+            document.getElementById("missionName").value = data.mission?.name || "";
+            document.getElementById("missionEnemy").value = data.mission?.enemy || "";
+            document.getElementById("missionMap").value = data.mission?.map || "";
+            document.getElementById("missionTime").value = data.mission?.time || "";
+            document.getElementById("missionNotes").value = data.mission?.notes || "";
+            document.getElementById("statusIndicator").innerText = data.status || "Preparing";
+            document.getElementById("warTime").value = data.warTime || "";
+            document.getElementById("mapStrat").value = data.tactics?.map || "";
+            document.getElementById("teamRoles").value = data.tactics?.roles || "";
+            document.getElementById("enemyAnalysis").value = data.tactics?.enemy || "";
+            document.getElementById("specialTactics").value = data.tactics?.special || "";
+            document.getElementById("utilityPlan").value = data.tactics?.utility || "";
+            document.getElementById("timedPlan").value = data.tactics?.timed || "";
+            document.getElementById("mapSelector").value = data.tactics?.selectedMap || "Factory";
+            document.getElementById("rosterList").innerHTML = "";
+            (data.roster || []).forEach(text=>{
+                const div = document.createElement("div");
+                div.className="player"; div.innerText = text;
+                div.onclick = ()=>{ selectedPlayer = text.split(" [")[0]; highlightSelectedPlayer(div); };
+                document.getElementById("rosterList").appendChild(div);
+            });
+            localStorage.setItem("enemyDB", JSON.stringify(data.enemies || []));
+            rebuildEnemySelect();
+            updateDashboardSummary();
+            updateMapPreview();
+            alert("Imported package.");
+            playUISound();
+        }catch(err){ alert("Invalid file."); }
+    };
+    reader.readAsText(file);
+}
+
+/* ---------- Enemy DB ---------- */
+function saveEnemy(){
+    const enemy = {
+        name: document.getElementById("enemyName").value.trim(),
+        style: document.getElementById("enemyStyle").value,
+        favMaps: document.getElementById("enemyFavMaps").value,
+        stars: document.getElementById("enemyStars").value,
+        weakness: document.getElementById("enemyWeakness").value,
+        history: document.getElementById("enemyHistory").value
+    };
+    if(!enemy.name) return alert("Enemy name required.");
+    let db = JSON.parse(localStorage.getItem("enemyDB") || "[]");
+    db = db.filter(e=>e.name !== enemy.name);
+    db.push(enemy);
+    localStorage.setItem("enemyDB", JSON.stringify(db));
+    rebuildEnemySelect(); alert("Enemy profile saved."); playUISound();
+}
+function rebuildEnemySelect(){
+    const db = JSON.parse(localStorage.getItem("enemyDB") || "[]");
+    const sel = document.getElementById("enemySelect");
+    sel.innerHTML = '<option value="">Select enemy...</option>';
+    db.forEach(e=>{
+        const opt = document.createElement("option"); opt.value = e.name; opt.innerText = e.name; sel.appendChild(opt);
+    });
+}
+function loadEnemyProfile(){
+    const name = document.getElementById("enemySelect").value;
+    if(!name){ document.getElementById("enemyProfile").innerHTML=""; return; }
+    const db = JSON.parse(localStorage.getItem("enemyDB") || "[]");
+    const enemy = db.find(x=>x.name===name);
+    if(!enemy) return;
+    document.getElementById("enemyProfile").innerHTML =
+        `<p><strong>Playstyle:</strong> ${enemy.style}</p>` +
+        `<p><strong>Favorite maps:</strong> ${enemy.favMaps}</p>` +
+        `<p><strong>Star players:</strong> ${enemy.stars}</p>` +
+        `<p><strong>Weaknesses:</strong> ${enemy.weakness}</p>` +
+        `<p><strong>History:</strong> ${enemy.history}</p>`;
+}
+function clearEnemyForm(){
+    document.getElementById("enemyName").value="";
+    document.getElementById("enemyStyle").value="";
+    document.getElementById("enemyFavMaps").value="";
+    document.getElementById("enemyStars").value="";
+    document.getElementById("enemyWeakness").value="";
+    document.getElementById("enemyHistory").value="";
+}
+
+/* ---------- War Room ---------- */
+function refreshWarRoom(){
+    document.getElementById("attackBoardClone").innerHTML = document.getElementById("attackBoard").innerHTML;
+    document.getElementById("defenseBoardClone").innerHTML = document.getElementById("defenseBoard").innerHTML;
+    document.getElementById("tacticsSummary").value =
+        "Map: " + document.getElementById("mapSelector").value + "\n\n" +
+        "Strategy:\n" + document.getElementById("mapStrat").value + "\n\n" +
+        "Roles:\n" + document.getElementById("teamRoles").value + "\n\n" +
+        "Enemy:\n" + document.getElementById("enemyAnalysis").value + "\n\n" +
+        "Special:\n" + document.getElementById("specialTactics").value + "\n\n" +
+        "Utility:\n" + document.getElementById("utilityPlan").value + "\n\n" +
+        "Timed:\n" + document.getElementById("timedPlan").value;
+    document.getElementById("rosterSnapshot").innerHTML = document.getElementById("rosterList").innerHTML;
+    playUISound();
+}
+
+/* ---------- Chat ---------- */
+function sendChat(){
+    const name = document.getElementById("chatName").value.trim();
+    const rank = document.getElementById("chatRank").value;
+    const text = document.getElementById("chatText").value.trim();
+    if(!name || !text) return;
+    const div = document.createElement("div"); div.className="msg";
+    div.innerText = `[${rank}] ${name}: ${text}`;
+    document.getElementById("chatMessages").appendChild(div);
+    document.getElementById("chatText").value="";
+    const cm = document.getElementById("chatMessages"); cm.scrollTop = cm.scrollHeight;
+    playUISound();
+}
+function clearChat(){ if(confirm("Clear chat history?")) document.getElementById("chatMessages").innerHTML=""; }
+
+/* ---------- Countdown ---------- */
+function startCountdown(){
+    if(countdownInterval) clearInterval(countdownInterval);
+    const wt = document.getElementById("warTime").value;
+    if(!wt) { document.getElementById("countdownDisplay").innerText = "No war time set."; return; }
+    const target = new Date(wt);
+    countdownInterval = setInterval(()=>{
+        const now = new Date(); const diff = target - now;
+        if(diff <= 0){ document.getElementById("countdownDisplay").innerText = "WAR TIME!"; clearInterval(countdownInterval); return; }
+        const days = Math.floor(diff / 86400000);
+        const hrs = Math.floor((diff % 86400000) / 3600000);
+        const mins = Math.floor((diff % 3600000) / 60000);
+        const secs = Math.floor((diff % 60000) / 1000);
+        document.getElementById("countdownDisplay").innerText = (days?days+"d ":"") + hrs + "h " + mins + "m " + secs + "s";
+    },1000);
+    playUISound();
+}
+function stopCountdown(){ if(countdownInterval) clearInterval(countdownInterval); document.getElementById("countdownDisplay").innerText="Countdown stopped."; }
+
+/* ---------- Mission ---------- */
+function saveMission(){ alert("Mission briefing saved."); playUISound(); }
+function clearMission(){ if(confirm("Clear mission briefing?")){ document.getElementById("missionName").value=""; document.getElementById("missionEnemy").value=""; document.getElementById("missionMap").value=""; document.getElementById("missionTime").value=""; document.getElementById("missionNotes").value=""; } }
+
+/* ---------- Map preview ---------- */
+function updateMapPreview(){
+    const sel = document.getElementById("mapSelector").value;
+    const img = document.getElementById("mapPreview");
+    const placeholder = document.getElementById("mapPreviewPlaceholder");
+    const url = mapImages[sel] || "";
+    if(url){
+        img.src = url;
+        img.style.display = "block";
+        placeholder.style.display = "none";
+    } else {
+        img.style.display = "none";
+        img.src = "";
+        placeholder.style.display = "block";
+    }
+}
+
+/* ---------- Exported helpers ---------- */
+function clearBoardHTML(boardId){ const b=document.getElementById(boardId); if(b) b.innerHTML=""; }
+
+/* ---------- Init ---------- */
+window.onload = function(){
+    document.body.style.opacity = 1;
+    rebuildEnemySelect();
+    updateDashboardSummary();
+    updateMapPreview();
+    // ensure boards exist
+    ["attackBoard","defenseBoard","attackBoardClone","defenseBoardClone"].forEach(id=>{
+        if(!document.getElementById(id)) return;
+    });
+};
+
+/* ---------- Small utilities ---------- */
+function toggleClass(el,cls){ if(el.classList.contains(cls)) el.classList.remove(cls); else el.classList.add(cls); }
+
+/* ---------- End of script ---------- */
+</script>
+</body>
+</html>
